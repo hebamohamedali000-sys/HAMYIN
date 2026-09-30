@@ -5,6 +5,7 @@ const path = require("path");
 
 const PORT = process.env.PORT || 3000;
 const ROOT = __dirname;
+const PUBLIC_DIR = path.join(ROOT, "public");
 // كلمة مرور لوحة التحكم — غيّرها من متغيرات Railway (ADMIN_PASSWORD)
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "fazaa2026";
 // مكان حفظ الطلبات — على Railway اربط Volume واجعل DATA_DIR يشير إليه
@@ -206,9 +207,8 @@ http.createServer((req, res) => {
 
   if (urlPath === "/") urlPath = "/index.html";
   if (!path.extname(urlPath)) urlPath += ".html";            // /order → order.html
-  const file = path.normalize(path.join(ROOT, urlPath));
-  const base = path.basename(file);
-  if (!file.startsWith(ROOT) || file.startsWith(DATA_DIR) || base === "server.js" || base === "package.json") {
+  const file = path.normalize(path.join(PUBLIC_DIR, urlPath));
+  if (!file.startsWith(PUBLIC_DIR)) {
     res.writeHead(403); return res.end("Forbidden");
   }
   fs.readFile(file, (err, data) => {
