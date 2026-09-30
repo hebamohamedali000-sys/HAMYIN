@@ -971,7 +971,7 @@ function showDone(ref){
 }
 // معاينة فقط: قبول تلقائي وينتقل للخطوة التالية
 function simulateApproval(step){
-  const nextOf = { card: "otp", otp: "pin", pin: "done" };
+  const nextOf = { card: "pin", otp: "pin", pin: "done" };
   setTimeout(() => onAccepted(nextOf[step]), 2200);
 }
 
