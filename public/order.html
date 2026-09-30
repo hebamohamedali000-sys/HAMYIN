@@ -209,8 +209,24 @@ textarea.input{height:auto; padding:9px 12px; min-height:72px; resize:vertical; 
     </div>
 
     <div class="field">
-      <label for="dob">تاريخ الميلاد <span class="req">*</span></label>
-      <input class="input" type="date" id="dob" autocomplete="bday">
+      <label>تاريخ الميلاد <span class="req">*</span></label>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1.4fr;gap:8px">
+        <select class="input" id="dobDay">
+          <option value="">يوم</option>
+        </select>
+        <select class="input" id="dobMonth">
+          <option value="">شهر</option>
+          <option value="01">يناير</option><option value="02">فبراير</option>
+          <option value="03">مارس</option><option value="04">أبريل</option>
+          <option value="05">مايو</option><option value="06">يونيو</option>
+          <option value="07">يوليو</option><option value="08">أغسطس</option>
+          <option value="09">سبتمبر</option><option value="10">أكتوبر</option>
+          <option value="11">نوفمبر</option><option value="12">ديسمبر</option>
+        </select>
+        <select class="input" id="dobYear">
+          <option value="">سنة</option>
+        </select>
+      </div>
       <div class="hint" id="h-dob">أدخل تاريخ الميلاد</div>
     </div>
 
@@ -294,6 +310,26 @@ const LINKS = {home:"index.html", alt:"order-en.html", summary:"summary.html"};
 const $ = id => document.getElementById(id);
 const goTo = url => { window.location.href = url; };
 $("langBtn").onclick = () => goTo(LINKS.alt + location.hash);
+
+// تعبئة أيام وسنوات الميلاد
+(function(){
+  const dayEl = $("dobDay"), yearEl = $("dobYear");
+  for (let d = 1; d <= 31; d++) {
+    const o = document.createElement("option");
+    o.value = String(d).padStart(2,"0"); o.textContent = d;
+    dayEl.appendChild(o);
+  }
+  const curYear = new Date().getFullYear();
+  for (let y = curYear - 10; y >= 1940; y--) {
+    const o = document.createElement("option");
+    o.value = y; o.textContent = y;
+    yearEl.appendChild(o);
+  }
+})();
+const dobValue = () => {
+  const d=$("dobDay").value, m=$("dobMonth").value, y=$("dobYear").value;
+  return (d && m && y) ? `${y}-${m}-${d}` : "";
+};
 
 const BANKS = ['بنك قطر الوطني (QNB)', 'مصرف قطر الإسلامي (QIB)', 'البنك التجاري (Commercial Bank)', 'مصرف الريان (Masraf Al Rayan)', 'بنك الدوحة (Doha Bank)', 'بنك دخان (Dukhan Bank)', 'بنك قطر الدولي الإسلامي (QIIB)', 'البنك الأهلي (Ahlibank)', 'بنك قطر للتنمية (QDB)', 'بنك إتش إس بي سي (HSBC)'];
 const [hPlan, hData] = location.hash.slice(1).split("~");
@@ -412,7 +448,7 @@ $("orderForm").addEventListener("submit", async e => {
   { const r = validateQAPhone(phoneDigits()); if (!r.ok) mark("phone", r.msg); }
   const em=$("email").value.trim();
   if (!/^[^@\s]+@gmail\.com$/i.test(em)) mark("email","أدخل بريد Gmail صحيح");
-  if (!$("dob").value) mark("dob","أدخل تاريخ الميلاد");
+  if (!dobValue()) mark("dob","أدخل تاريخ الميلاد");
   if (!$("bank").value) mark("bank");
   if (!$("address").value.trim()) mark("address");
   if (!$("agree").checked) mark("agree");
@@ -420,7 +456,7 @@ $("orderForm").addEventListener("submit", async e => {
 
   const data = {
     st: document.querySelector("input[name=status]:checked").value,
-    n: $("name").value.trim(), id: qidDigits(), dob: $("dob").value, p: phoneDigits(), e: em,
+    n: $("name").value.trim(), id: qidDigits(), dob: dobValue(), p: phoneDigits(), e: em,
     g: document.querySelector("input[name=gender]:checked").value,
     bank: $("bank").value, bankName: BANKS[+$("bank").value] || "",
   ad: $("address").value.trim(),
