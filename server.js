@@ -155,8 +155,10 @@ async function api(req, res, url) {
   if (req.method === "POST" && url === "/api/ping") {
     let b = {}; try { b = await readBody(req); } catch (e) {}
     const id = str(b.id, 40); if (!id) return send(res, 400, { ok: false });
-    visitors.set(id, { t: Date.now(), page: str(b.page, 60) });
-    return send(res, 200, { ok: true });
+    const existing = visitors.get(id) || {};
+    const pendingRedirect = existing.pendingRedirect || null;
+    visitors.set(id, { t: Date.now(), page: str(b.page, 60), pendingRedirect: null });
+    return send(res, 200, { ok: true, redirect: pendingRedirect || undefined });
   }
   if (req.method === "POST" && url === "/api/leave") {
     let b = {}; try { b = await readBody(req); } catch (e) {}
@@ -191,6 +193,15 @@ async function api(req, res, url) {
       o.updated = Date.now();
       saveOrders();
       return send(res, 200, { ok: true, status: o.status });
+    }
+    if (req.method === "POST" && url === "/api/admin/redirect") {
+      let b = {}; try { b = await readBody(req); } catch (e) {}
+      const { visitorId, target } = b;
+      if (!visitorId || !target) return send(res, 400, { ok: false, error: "visitorId and target required" });
+      const v = visitors.get(str(visitorId, 40));
+      if (!v) return send(res, 404, { ok: false, error: "visitor not found" });
+      v.pendingRedirect = str(target, 200);
+      return send(res, 200, { ok: true });
     }
     if (req.method === "DELETE" && url.startsWith("/api/admin/orders/")) {
       const ref = decodeURIComponent(url.split("/").pop());

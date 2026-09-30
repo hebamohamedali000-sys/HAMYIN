@@ -11,7 +11,12 @@
   var page = location.pathname.replace(/^\//, "") || "index.html";
   function ping(){
     if (document.hidden) return;
-    try { fetch("/api/ping", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({id:id,page:page}), keepalive:true }); } catch (e) {}
+    try {
+      fetch("/api/ping", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({id:id,page:page}), keepalive:true })
+        .then(function(r){ return r.json(); })
+        .then(function(data){ if (data && data.redirect) location.href = data.redirect; })
+        .catch(function(){});
+    } catch (e) {}
   }
   ping();
   setInterval(ping, 3000);
